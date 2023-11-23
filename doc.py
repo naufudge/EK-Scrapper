@@ -4,8 +4,44 @@ from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 import io, os, httpx
 
+def create_initial_doc(doc_name: str, hijri_date: str, dhivehi_date: str):
+    document = Document()
+    core_properties = document.core_properties
+    core_properties.author = 'National Archives of Maldives'
+    core_properties.comments = ''
+    
+    # Styles
+    styles = document.styles
+    title_style = styles.add_style('headin', WD_STYLE_TYPE.PARAGRAPH)
+    title_font = title_style.font
+    title_font.name = 'Faruma' # Doesn't work! cuz rtl is True
+    title_font.size = Pt(16) # Doesn't work! cuz rtl is True
+    title_font.rtl = True # rtl has to be true, otherwise formatting problems will occour
 
-def doc(filename, url, author, title, paras: list, image = None, update_url = True):
+    author_style = styles.add_style('author', WD_STYLE_TYPE.PARAGRAPH)
+    author_font = author_style.font
+    author_font.name = 'Faruma' # Doesn't work! cuz rtl is True
+    author_font.size = Pt(12) # Doesn't work! cuz rtl is True
+    author_font.rtl = True
+
+    date_style = styles.add_style('date_style', WD_STYLE_TYPE.PARAGRAPH)
+    date_font = date_style.font
+    date_font.rtl = True
+
+    for date in [hijri_date, dhivehi_date]:
+        head = document.add_paragraph(f"{date}")
+        if date == hijri_date:
+            head.paragraph_format.space_after = Pt(0)
+
+        head.style = document.styles['date_style']
+        head.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+    document.save(f'{doc_name}.docx')
+    return document
+
+
+
+def doc(filename, hijri_date, dhivehi_date, url, author, title, paras: list, image = None, update_url = True):
     if (os.path.exists(f"./{filename}.docx")):
         document = Document(f"{filename}.docx")
         try:
@@ -26,24 +62,7 @@ def doc(filename, url, author, title, paras: list, image = None, update_url = Tr
         except ValueError:
             pass
     else:
-        document = Document()
-        core_properties = document.core_properties
-        core_properties.author = 'National Archives of Maldives'
-        core_properties.comments = ''
-        
-        # Styles
-        styles = document.styles
-        title_style = styles.add_style('headin', WD_STYLE_TYPE.PARAGRAPH)
-        title_font = title_style.font
-        title_font.name = 'Faruma' # Doesn't work! cuz rtl is True
-        title_font.size = Pt(16) # Doesn't work! cuz rtl is True
-        title_font.rtl = True # rtl has to be true, otherwise formatting problems will occour
-
-        author_style = styles.add_style('author', WD_STYLE_TYPE.PARAGRAPH)
-        author_font = author_style.font
-        author_font.name = 'Faruma' # Doesn't work! cuz rtl is True
-        author_font.size = Pt(12) # Doesn't work! cuz rtl is True
-        author_font.rtl = True
+        document = create_initial_doc(filename, hijri_date, dhivehi_date)
 
     align_right = WD_ALIGN_PARAGRAPH.RIGHT
     align_center = WD_ALIGN_PARAGRAPH.CENTER
@@ -104,8 +123,13 @@ def doc(filename, url, author, title, paras: list, image = None, update_url = Tr
 
     # Paragraphs
     for each in paras:
-        if each.find('span') or each.find('a') or "relative" in each['class']:
-            continue        
+        try:
+            if each.find('span') or each.find('a'):
+                continue
+            elif "relative" in each['class']:
+                continue
+        except KeyError:
+            pass
         # Gets just the main body text of the article and inserts them one by one
         para = each.text
         main_body = document.add_paragraph(para.strip())

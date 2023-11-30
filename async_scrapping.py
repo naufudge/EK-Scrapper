@@ -35,8 +35,6 @@ class NewsScrapping:
 
         if page.status_code < 400:
             soup = BeautifulSoup(page.content, 'html.parser')
-            if not is_news_sun(soup):
-                return None
             
             article_title = soup.find('div', class_='component-article-title')
             results['title'] = article_title.find('h1').text
@@ -77,8 +75,6 @@ class NewsScrapping:
             return f"{url} is not a URL"
         if page.status_code < 400:
             soup = BeautifulSoup(page.content, 'html.parser')
-            if not is_news_mihaaru(soup):
-                return None
             
             # Find the Title
             results['title'] = soup.find('h1').text

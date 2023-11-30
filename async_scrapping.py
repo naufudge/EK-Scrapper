@@ -130,13 +130,15 @@ class NewsScrapping:
 
             #Find the Author name and time
             results['author'] = ""
-            # time = soup.find('div', class_="small-text").text
 
             #Find Article Picture Link and it's caption
             try:
                 results['pic'] = article_title.find('img')['src']
+                if "/Images/fileicons/pdf.png" in results['pic']:
+                    results['pic'] = ""
             except TypeError:
                 results['pic'] = ""
+                
             #Finds all the main body writing of the article
             article_main = soup.find('div', class_='article-body')
             results['paras'] = article_main.find_all('p')

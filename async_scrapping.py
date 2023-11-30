@@ -137,7 +137,7 @@ class NewsScrapping:
                 
             #Finds all the main body writing of the article
             article_main = soup.find('div', class_='article-body')
-            results['paras'] = article_main.find_all('p')
+            results['paras'] = article_main.find_all()
         return results
 
     async def Avas(self, url):

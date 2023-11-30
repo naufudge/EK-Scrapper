@@ -3,5 +3,5 @@ requests
 httpx
 beautifulsoup4
 hijridate
-tkinter
+tk
 tkcalendar

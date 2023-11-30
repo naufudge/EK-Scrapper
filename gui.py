@@ -113,7 +113,7 @@ class Scrapper:
         # self.entry = tk.Entry(self.root, width=35, borderwidth=2, font=('Faruma', 14), textvariable=self.file_name)
         # self.entry.pack(padx=20, pady=10)
 
-        self.updates = tk.Label(self.root, text="އައުޓްޕުޓް", font=('Faruma', 14))
+        self.updates = tk.Label(self.root, text="މިންވަރު", font=('Faruma', 14))
         self.updates.grid(row=3, column=1)
 
         self.progress = tk.Text(self.root, height=10, width=70, state='disabled', font=('Calibri', 12))
@@ -172,6 +172,7 @@ class Scrapper:
         urls.append(inputt)
 
         new_urls = [url.strip() for sublist in urls for url in sublist]
+        
         date = self.calendar.get_date().split('/')
         file_name = self.get_file_name(date)
 
@@ -203,24 +204,27 @@ class Scrapper:
                     tasks.append(asyncio.create_task(ns.Avas(url)))
 
                 else:
-                    self.printer(f"'{url}' isn't a supported link. Please enter a suitable link.")
+                    self.printer(f"\"{url}\" isn't a supported link. Please enter a suitable link.")
                     continue
 
             results = await asyncio.gather(*tasks)
 
             #BELOW HERE IS INPUTING THE DATA TO DOCX FILE
             for result in results:
-                update_msg = doc(
-                    filename = file_name,
-                    hijri_date=hijri_date,
-                    dhivehi_date=dhivehi_date,
-                    url = result['url'], 
-                    author = result['author'], 
-                    title = result['title'], 
-                    image = result['pic'], 
-                    paras = result['paras']
-                    )
-                self.printer(update_msg)
+                try:
+                    update_msg = doc(
+                        filename = file_name,
+                        hijri_date=hijri_date,
+                        dhivehi_date=dhivehi_date,
+                        url = result['url'], 
+                        author = result['author'], 
+                        title = result['title'], 
+                        image = result['pic'], 
+                        paras = result['paras']
+                        )
+                    self.printer(update_msg)
+                except Exception as e:
+                    self.printer(f"An error occured {e.__class__.__name__}, when trying to process: {result['url']}")
 
         print("Finished copying all the links!")
         self.printer("Finished copying all the links!")

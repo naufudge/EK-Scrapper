@@ -153,7 +153,7 @@ class Scrapper:
     def get_hijri_date(self, date: list):
         """Returns Gregorian Date [dd, MM, yyy] converted into Hijri Date in Dhivehi as a string"""
         date = [int(num) for num in date]
-        converted_date = str(Gregorian(date[2], date[1], date[0]).to_hijri())
+        converted_date = str(Gregorian(date[2], date[1], date[0]+1).to_hijri())
         converted_date_list = converted_date.split('-')
         converted_date_list[1] = hijri_num_to_month[int(converted_date_list[1])]
         

@@ -138,7 +138,7 @@ class Scrapper:
         months = {v: k for k, v in month_num.items()}
         day = int(date[0])
         if day < 10:
-            day = f"0{date[0]}"
+            day = str(date[0])
         month = short_to_long_month[months[int(date[1])]].capitalize()
 
         return f"{day} {month} {date[2]}"
@@ -153,7 +153,6 @@ class Scrapper:
     def get_hijri_date(self, date: list):
         """Returns Gregorian Date [dd, MM, yyy] converted into Hijri Date in Dhivehi as a string"""
         date = [int(num) for num in date]
-        print(date)
         converted_date = str(Gregorian(date[2], date[1], date[0]).to_hijri())
         converted_date_list = converted_date.split('-')
         converted_date_list[1] = hijri_num_to_month[int(converted_date_list[1])]

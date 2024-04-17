@@ -116,8 +116,9 @@ class NewsScrapping:
         results = {'url': url}
         try:
             page = await self.client.get(url)
-        except httpx.UnsupportedProtocol as e:
-            return f"{url} is not a URL"
+            # page = await self._get_president(url)
+        except Exception as e:
+            return e
         if page.status_code < 400:
             soup = BeautifulSoup(page.content, 'html.parser')
             #Find the Title

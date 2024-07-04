@@ -186,7 +186,7 @@ class Scrapper:
             self.printer("Please choose a date.")
             return
 
-        timeout = httpx.Timeout(5, connect=None, read=None)
+        timeout = httpx.Timeout(5, connect_timeout=None, read_timeout=None)
         async with httpx.AsyncClient(http2=True, timeout=timeout) as client:
             ns = NewsScrapping(client)
 

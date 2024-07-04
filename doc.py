@@ -113,7 +113,7 @@ def doc(filename, hijri_date, dhivehi_date, url, author, title, paras: list, ima
 
     # Image
     if image != "" and image != None:
-        timeout = httpx.Timeout(5, read=None)
+        timeout = httpx.Timeout(5, connect_timeout=None, read_timeout=None)
         with httpx.Client(http2=True, timeout=timeout) as client:
             imgLinkData = io.BytesIO(client.get(image).content)
             picture = document.add_picture(imgLinkData, width=Inches(2))

@@ -1,7 +1,7 @@
-python-docx
+python-docx==0.8.11
 requests
-httpx
-beautifulsoup4
-hijridate
+httpx[http2]==0.13.3
+beautifulsoup4==4.11.2
+hijridate==2.3.0
 tk
-tkcalendar
+tkcalendar==1.6.1

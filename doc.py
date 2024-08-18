@@ -2,6 +2,8 @@ from docx import Document
 from docx.shared import Pt, Inches
 from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
+from docx.image.exceptions import UnrecognizedImageError
+from PIL import Image
 import io, os, httpx
 
 def create_initial_doc(doc_name: str, hijri_date: str, dhivehi_date: str):
@@ -116,7 +118,15 @@ def doc(filename, hijri_date, dhivehi_date, url, author, title, paras: list, ima
         timeout = httpx.Timeout(5, connect_timeout=None, read_timeout=None)
         with httpx.Client(http2=True, timeout=timeout) as client:
             imgLinkData = io.BytesIO(client.get(image).content)
-            picture = document.add_picture(imgLinkData, width=Inches(2))
+            try:
+                picture = document.add_picture(imgLinkData, width=Inches(2))
+            except UnrecognizedImageError:
+                # Picture not recognized by python-docx.
+                img = Image.open(imgLinkData).convert("RGB")
+                img_buffer = io.BytesIO()
+                img.save(img_buffer, format="JPEG")
+                picture = document.add_picture(img_buffer, width=Inches(2))
+
             last_paragraph = document.paragraphs[-1]
             last_paragraph.alignment = align_center
             # last_paragraph.paragraph_format.space_after = Pt(2)

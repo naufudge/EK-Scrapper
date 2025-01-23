@@ -209,7 +209,7 @@ class Scrapper:
 
             results = await asyncio.gather(*tasks)
 
-            #BELOW HERE IS INPUTING THE DATA TO DOCX FILE
+            # BELOW HERE IS INPUTING THE DATA TO DOCX FILE
             for result in results:
                 try:
                     update_msg = doc(
@@ -225,6 +225,7 @@ class Scrapper:
                     self.printer(update_msg)
                 except Exception as e:
                     self.printer(f"An error occured {e.__class__.__name__}, when trying to process: {result['url']}")
+                    self.printer(e)
 
         print("Finished copying all the links!")
         self.printer("Finished copying all the links!")

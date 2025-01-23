@@ -1,4 +1,6 @@
 from docx import Document
+from docx.oxml import OxmlElement
+from docx.oxml.ns import qn
 from docx.shared import Pt, Inches
 from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -69,6 +71,12 @@ def doc(filename, hijri_date, dhivehi_date, url, author, title, paras: list, ima
     align_right = WD_ALIGN_PARAGRAPH.RIGHT
     align_center = WD_ALIGN_PARAGRAPH.CENTER
 
+    # Title
+    main_head = document.add_heading(title.strip())
+    # main_head.paragraph_format.space_after = Pt(2)
+    main_head.style = document.styles['headin']
+    main_head.alignment = align_right
+
     if (url.find("sun.mv") > 0):
         website = document.add_paragraph("ޚަބަރު ނެގީ: ސަން ވެބްސައިޓުން")
     elif (url.find("presidency.gov.mv") > 0):
@@ -81,7 +89,7 @@ def doc(filename, hijri_date, dhivehi_date, url, author, title, paras: list, ima
     website.alignment = align_right
     website.style = document.styles['author']
 
-    # Main body text design
+    # Main body text style
     style = document.styles['Normal']
     font = style.font
     # font.name = "Faruma"
@@ -106,12 +114,6 @@ def doc(filename, hijri_date, dhivehi_date, url, author, title, paras: list, ima
         # auth.paragraph_format.space_after = Pt(2)
         auth.style = document.styles['author']
         auth.alignment = align_right
-
-    # Title
-    main_head = document.add_heading(title.strip())
-    # main_head.paragraph_format.space_after = Pt(2)
-    main_head.style = document.styles['headin']
-    main_head.alignment = align_center
 
     # Image
     if image != "" and image != None:

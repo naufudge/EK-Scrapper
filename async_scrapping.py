@@ -91,14 +91,16 @@ class NewsScrapping:
 
             # Find Article Picture Link
 
-            article_pic = soup.find('div', class_="w-full lg:max-w-40rem xl:max-w-3xl")
+            article_pic = soup.find('img', class_="w-full object-cover")
             try:
-                results['pic'] = article_pic.find('img')['src']
+                pic = article_pic['src']
+                temp_pic = pic.split("https://")
+                results['pic'] = f"https://{temp_pic[1]}"
             except TypeError:
                 results['pic'] = ""
 
             # Find all the main body wiriting of the article
-            article_main = soup.find('div', class_="flex-1 lg:pr-4 lg:border-r lg:border-pale-grey mt-8 w-full")
+            article_main = soup.find('div', class_="article-body space-y-10")
             # results['paras'] = article_main.find_all('p')
             paras = article_main.find_all('p')
             for para in paras:

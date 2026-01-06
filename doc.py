@@ -45,7 +45,7 @@ def create_initial_doc(doc_name: str, hijri_date: str, dhivehi_date: str):
 
 
 
-def doc(filename, hijri_date, dhivehi_date, url, author, title, paras: list, image = None, update_url = True):
+def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, paras: list, image = None, update_url = True):
     if (os.path.exists(f"./{filename}.docx")):
         document = Document(f"{filename}.docx")
         try:

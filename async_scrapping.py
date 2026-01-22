@@ -1,4 +1,4 @@
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, PageElement, ResultSet
 import httpx
 
 # Modified for full automation
@@ -75,6 +75,10 @@ class NewsScrapping:
             return f"{url} is not a URL"
         if page.status_code < 400:
             soup = BeautifulSoup(page.content, 'html.parser')
+
+            # Remove any element with hidden class
+            for each in soup.select(".hidden"):
+                each.decompose();
             
             # Find the Title
             results['title'] = soup.find('h1').text
@@ -90,8 +94,8 @@ class NewsScrapping:
                 results['author'] = ""
 
             # Find Article Picture Link
-
             article_pic = soup.find('img', class_="w-full object-cover")
+
             try:
                 pic = article_pic['src']
                 temp_pic = pic.split("https://")
@@ -102,7 +106,7 @@ class NewsScrapping:
             # Find all the main body wiriting of the article
             article_main = soup.find('div', class_="article-body space-y-10")
             # results['paras'] = article_main.find_all('p')
-            paras = article_main.find_all('p')
+            paras: ResultSet[PageElement] = article_main.find_all(['p', 'a'])
             for para in paras:
                 try:
                     if "text-lg" in para['class'] or "text-xs" in para['class']:

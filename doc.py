@@ -6,7 +6,39 @@ from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.image.exceptions import UnrecognizedImageError
 from PIL import Image
+from bs4 import NavigableString
 import io, os, httpx
+
+
+def add_hyperlink(paragraph, url, text):
+    """Add a clickable hyperlink to a paragraph."""
+    part = paragraph.part
+    r_id = part.relate_to(url, 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink', is_external=True)
+
+    hyperlink = OxmlElement('w:hyperlink')
+    hyperlink.set(qn('r:id'), r_id)
+
+    new_run = OxmlElement('w:r')
+    rPr = OxmlElement('w:rPr')
+
+    # Blue color and underline for hyperlink styling
+    color = OxmlElement('w:color')
+    color.set(qn('w:val'), '0000FF')
+    rPr.append(color)
+
+    u = OxmlElement('w:u')
+    u.set(qn('w:val'), 'single')
+    rPr.append(u)
+
+    new_run.append(rPr)
+    text_elem = OxmlElement('w:t')
+    text_elem.text = text
+    new_run.append(text_elem)
+    hyperlink.append(new_run)
+
+    paragraph._p.append(hyperlink)
+    return hyperlink
+
 
 def create_initial_doc(doc_name: str, hijri_date: str, dhivehi_date: str):
     document = Document()
@@ -42,7 +74,6 @@ def create_initial_doc(doc_name: str, hijri_date: str, dhivehi_date: str):
 
     document.save(f'{doc_name}.docx')
     return document
-
 
 
 def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, paras: list, image = None, update_url = True):
@@ -136,16 +167,42 @@ def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, p
     # Paragraphs
     for each in paras:
         try:
-            if each.find('span') or each.find('a'):
+            if each.find('span'):
                 continue
             elif "relative" in each['class']:
                 continue
         except KeyError:
             pass
-        # Gets just the main body text of the article and inserts them one by one
-        para = each.text
-        main_body = document.add_paragraph(para.strip())
+
+        # Handle standalone <a> tags (not inside <p>)
+        if each.name == 'a' and each.get('href'):
+            main_body = document.add_paragraph()
+            main_body.alignment = align_right
+            link_text = each.get_text().strip()
+            link_url = each['href']
+            if link_text and link_url:
+                add_hyperlink(main_body, link_url, link_text)
+            continue
+
+        main_body = document.add_paragraph()
         main_body.alignment = align_right
+
+        # Process paragraph contents preserving hyperlinks
+        for child in each.children:
+            if isinstance(child, NavigableString):
+                text = str(child).strip()
+                if text:
+                    main_body.add_run(text)
+            elif child.name == 'a' and child.get('href'):
+                link_text = child.get_text().strip()
+                link_url = child['href']
+                if link_text and link_url:
+                    add_hyperlink(main_body, link_url, link_text)
+            elif child.name:
+                # Handle other nested elements - extract text
+                text = child.get_text().strip()
+                if text:
+                    main_body.add_run(text)
 
     document.add_page_break()
 

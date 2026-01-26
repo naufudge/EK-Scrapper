@@ -31,6 +31,15 @@ def add_hyperlink(paragraph, url, text):
     u.set(qn('w:val'), 'single')
     rPr.append(u)
 
+    # RTL for hyperlink
+    rtl = OxmlElement('w:rtl')
+    rPr.append(rtl)
+
+    # Faruma font for Complex Script (RTL text)
+    rFonts = OxmlElement('w:rFonts')
+    rFonts.set(qn('w:cs'), 'Faruma')
+    rPr.append(rFonts)
+
     new_run.append(rPr)
     text_elem = OxmlElement('w:t')
     text_elem.text = text
@@ -51,19 +60,38 @@ def create_initial_doc(doc_name: str, hijri_date: str, dhivehi_date: str):
     styles = document.styles
     title_style = styles.add_style('headin', WD_STYLE_TYPE.PARAGRAPH)
     title_font = title_style.font
-    title_font.name = 'Faruma' # Doesn't work! cuz rtl is True
-    title_font.size = Pt(16) # Doesn't work! cuz rtl is True
-    title_font.rtl = True # rtl has to be true, otherwise formatting problems will occour
+    title_font.name = 'Faruma'
+    title_font.rtl = True
+    # Set Complex Script font for RTL text
+    rPr = title_style.element.get_or_add_rPr()
+    rFonts = rPr.get_or_add_rFonts()
+    rFonts.set(qn('w:cs'), 'Faruma')
+    # Set Complex Script font size
+    szCs = OxmlElement('w:szCs')
+    szCs.set(qn('w:val'), '32')  # Size in half-points (16pt = 32)
+    rPr.append(szCs)
 
     author_style = styles.add_style('author', WD_STYLE_TYPE.PARAGRAPH)
     author_font = author_style.font
-    author_font.name = 'Faruma' # Doesn't work! cuz rtl is True
-    author_font.size = Pt(12) # Doesn't work! cuz rtl is True
+    author_font.name = 'Faruma'
     author_font.rtl = True
+    # Set Complex Script font for RTL text
+    rPr = author_style.element.get_or_add_rPr()
+    rFonts = rPr.get_or_add_rFonts()
+    rFonts.set(qn('w:cs'), 'Faruma')
+    # Set Complex Script font size
+    szCs = OxmlElement('w:szCs')
+    szCs.set(qn('w:val'), '24')  # Size in half-points (12pt = 24)
+    rPr.append(szCs)
 
     date_style = styles.add_style('date_style', WD_STYLE_TYPE.PARAGRAPH)
     date_font = date_style.font
+    date_font.name = 'Faruma'
     date_font.rtl = True
+    # Set Complex Script font for RTL text
+    rPr = date_style.element.get_or_add_rPr()
+    rFonts = rPr.get_or_add_rFonts()
+    rFonts.set(qn('w:cs'), 'Faruma')
 
     for date in [hijri_date, dhivehi_date]:
         head = document.add_paragraph(f"{date}")
@@ -77,21 +105,25 @@ def create_initial_doc(doc_name: str, hijri_date: str, dhivehi_date: str):
     return document
 
 def apply_rtl(paragraph: Paragraph):
-    # 1. Set Paragraph Properties (pPr) for RTL
+    # 1. Set Paragraph Alignment (The easy way)
+    paragraph.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+
+    # 2. Set Paragraph Properties (pPr) for RTL Direction
     pPr = paragraph._p.get_or_add_pPr()
     
-    # Add <w:bidi /> to pPr
-    if pPr.find(qn('w:bidi')) is None:
-        bidi = OxmlElement('w:bidi')
-        pPr.append(bidi)
-    
-    # 2. Set Run Properties (rPr) for RTL
-    # This ensures punctuation and numbers behave correctly
+    # This ensures the paragraph itself is flagged as RTL
+    p_rtl = pPr.find(qn('w:rtl'))
+    if p_rtl is None:
+        p_rtl = OxmlElement('w:rtl')
+        pPr.insert(0, p_rtl) # Insert at beginning for XML schema compliance
+
+    # 3. Set Run Properties (rPr) for RTL Content
     for run in paragraph.runs:
         rPr = run._r.get_or_add_rPr()
-        if rPr.find(qn('w:rtl')) is None:
-            rtl = OxmlElement('w:rtl')
-            rPr.append(rtl)
+        r_rtl = rPr.find(qn('w:rtl'))
+        if r_rtl is None:
+            r_rtl = OxmlElement('w:rtl')
+            rPr.append(r_rtl)
 
 def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, paras: list, image = None, update_url = True):
     if (os.path.exists(f"./{filename}.docx")):
@@ -101,15 +133,29 @@ def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, p
             styles = document.styles
             title_style = styles.add_style('headin', WD_STYLE_TYPE.PARAGRAPH)
             title_font = title_style.font
-            title_font.name = 'Faruma' # Doesn't work! cuz rtl is True
-            title_font.size = Pt(16) # Doesn't work! cuz rtl is True
-            title_font.rtl = True # rtl has to be true, otherwise formatting problems will occour
+            title_font.name = 'Faruma'
+            title_font.rtl = True
+            # Set Complex Script font for RTL text
+            rPr = title_style.element.get_or_add_rPr()
+            rFonts = rPr.get_or_add_rFonts()
+            rFonts.set(qn('w:cs'), 'Faruma')
+            # Set Complex Script font size
+            szCs = OxmlElement('w:szCs')
+            szCs.set(qn('w:val'), '32')  # Size in half-points (16pt = 32)
+            rPr.append(szCs)
 
             author_style = styles.add_style('author', WD_STYLE_TYPE.PARAGRAPH)
             author_font = author_style.font
-            author_font.name = 'Faruma' # Doesn't work!
-            author_font.size = Pt(12) # Doesn't work!
+            author_font.name = 'Faruma'
             author_font.rtl = True
+            # Set Complex Script font for RTL text
+            rPr = author_style.element.get_or_add_rPr()
+            rFonts = rPr.get_or_add_rFonts()
+            rFonts.set(qn('w:cs'), 'Faruma')
+            # Set Complex Script font size
+            szCs = OxmlElement('w:szCs')
+            szCs.set(qn('w:val'), '24')  # Size in half-points (12pt = 24)
+            rPr.append(szCs)
 
         except ValueError:
             pass
@@ -136,29 +182,20 @@ def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, p
     elif (url.find("avas.mv") > 0):
         website = website_paragraph.add_run("ޚަބަރު ނެގީ: އަވަސް ވެބްސައިޓުން")
 
-    # website.paragraph_format.space_after = Pt(0)
-    # website.alignment = align_right
-    # website_paragraph._p.get_or_add_pPr().get_or_add_bidi().set(qn('w:val'), '1')
-
-    apply_rtl(website_paragraph)
-
-    website.font.color.rgb = RGBColor(255, 0, 0) # Red
-    website.font.name = "Faruma"
-    # website.style = document.styles['author']
-
-    r_obj = website._r.get_or_add_rPr()
-    r_obj.get_or_add_rtl().set(qn('w:val'), '1') # Set run to RTL
-
-    # This forces the specific font for Arabic/Hebrew scripts
-    rFonts = r_obj.get_or_add_rFonts()
-    rFonts.set(qn('w:cs'), 'Arial')
+    # Apply author style to website paragraph
+    website_paragraph.style = document.styles['author']
+    website_paragraph.paragraph_format.space_after = Pt(0)
+    website_paragraph.alignment = align_right
 
     # Main body text style
     style = document.styles['Normal']
     font = style.font
-    # font.name = "Faruma"
-    # font.size = Pt(12)
+    font.name = 'Faruma'
     font.rtl = True
+    # Set Complex Script font for RTL text
+    rPr = style.element.get_or_add_rPr()
+    rFonts = rPr.get_or_add_rFonts()
+    rFonts.set(qn('w:cs'), 'Faruma')
     
 
     # Link
@@ -215,6 +252,7 @@ def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, p
             link_url = each['href']
             if link_text and link_url:
                 add_hyperlink(main_body, link_url, link_text)
+            apply_rtl(main_body)
             continue
 
         main_body = document.add_paragraph()
@@ -236,6 +274,8 @@ def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, p
                 text = child.get_text().strip()
                 if text:
                     main_body.add_run(text)
+
+        apply_rtl(main_body)
 
     document.add_page_break()
 

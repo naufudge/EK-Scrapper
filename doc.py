@@ -1,12 +1,13 @@
 from docx import Document
 from docx.oxml import OxmlElement
 from docx.oxml.ns import qn
-from docx.shared import Pt, Inches
+from docx.shared import Pt, Inches, RGBColor
 from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.image.exceptions import UnrecognizedImageError
 from PIL import Image
 from bs4 import NavigableString
+from docx.text.paragraph import Paragraph
 import io, os, httpx
 
 
@@ -75,6 +76,22 @@ def create_initial_doc(doc_name: str, hijri_date: str, dhivehi_date: str):
     document.save(f'{doc_name}.docx')
     return document
 
+def apply_rtl(paragraph: Paragraph):
+    # 1. Set Paragraph Properties (pPr) for RTL
+    pPr = paragraph._p.get_or_add_pPr()
+    
+    # Add <w:bidi /> to pPr
+    if pPr.find(qn('w:bidi')) is None:
+        bidi = OxmlElement('w:bidi')
+        pPr.append(bidi)
+    
+    # 2. Set Run Properties (rPr) for RTL
+    # This ensures punctuation and numbers behave correctly
+    for run in paragraph.runs:
+        rPr = run._r.get_or_add_rPr()
+        if rPr.find(qn('w:rtl')) is None:
+            rtl = OxmlElement('w:rtl')
+            rPr.append(rtl)
 
 def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, paras: list, image = None, update_url = True):
     if (os.path.exists(f"./{filename}.docx")):
@@ -108,17 +125,33 @@ def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, p
     main_head.style = document.styles['headin']
     main_head.alignment = align_right
 
+    website_paragraph = document.add_paragraph()
+
     if (url.find("sun.mv") > 0):
-        website = document.add_paragraph("ޚަބަރު ނެގީ: ސަން ވެބްސައިޓުން")
+        website = website_paragraph.add_run("ޚަބަރު ނެގީ: ސަން ވެބްސައިޓުން")
     elif (url.find("presidency.gov.mv") > 0):
-        website = document.add_paragraph("ޚަބަރު ނެގީ: ރައީސް އޮފީސް ވެބްސައިޓުން")
+        website = website_paragraph.add_run("ޚަބަރު ނެގީ: ރައީސް އޮފީސް ވެބްސައިޓުން")
     elif (url.find("mihaaru.com") > 0):
-        website = document.add_paragraph("ޚަބަރު ނެގީ: މިހާރު ވެބްސައިޓުން")
+        website = website_paragraph.add_run("ޚަބަރު ނެގީ: މިހާރު ވެބްސައިޓުން")
     elif (url.find("avas.mv") > 0):
-        website = document.add_paragraph("ޚަބަރު ނެގީ: އަވަސް ވެބްސައިޓުން")
-    website.paragraph_format.space_after = Pt(0)
-    website.alignment = align_right
-    website.style = document.styles['author']
+        website = website_paragraph.add_run("ޚަބަރު ނެގީ: އަވަސް ވެބްސައިޓުން")
+
+    # website.paragraph_format.space_after = Pt(0)
+    # website.alignment = align_right
+    # website_paragraph._p.get_or_add_pPr().get_or_add_bidi().set(qn('w:val'), '1')
+
+    apply_rtl(website_paragraph)
+
+    website.font.color.rgb = RGBColor(255, 0, 0) # Red
+    website.font.name = "Faruma"
+    # website.style = document.styles['author']
+
+    r_obj = website._r.get_or_add_rPr()
+    r_obj.get_or_add_rtl().set(qn('w:val'), '1') # Set run to RTL
+
+    # This forces the specific font for Arabic/Hebrew scripts
+    rFonts = r_obj.get_or_add_rFonts()
+    rFonts.set(qn('w:cs'), 'Arial')
 
     # Main body text style
     style = document.styles['Normal']

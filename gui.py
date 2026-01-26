@@ -1,4 +1,4 @@
-import httpx, threading, asyncio
+import httpx, threading, asyncio, json, os
 from doc import doc
 import customtkinter as ctk
 from tkcalendar import Calendar
@@ -6,9 +6,8 @@ from hijridate import Gregorian
 from datetime import datetime
 from async_scrapping import NewsScrapping
 
-# CustomTkinter appearance settings
-ctk.set_appearance_mode("dark")
-ctk.set_default_color_theme("blue")
+# Settings file path
+SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.json')
 
 weekday_to_dhivehi = {
     0: "ހޯމަ",
@@ -80,6 +79,23 @@ month_num_in_dhivehi = {
     'ޑިސެންބަރު' : 12
 }
 
+def load_settings():
+    """Load settings from JSON file, return defaults if file doesn't exist."""
+    try:
+        with open(SETTINGS_FILE, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"theme": "dark"}
+
+def save_settings(settings):
+    """Save settings to JSON file."""
+    with open(SETTINGS_FILE, 'w') as f:
+        json.dump(settings, f, indent=2)
+
+# Load saved theme preference
+settings = load_settings()
+ctk.set_appearance_mode(settings.get("theme", "dark"))
+ctk.set_default_color_theme("blue")
 
 class Scrapper:
     def __init__(self, async_loop):
@@ -105,10 +121,11 @@ class Scrapper:
         self.header_frame.grid_columnconfigure(1, weight=1)
 
         # Theme toggle button (left side)
-        self.is_dark_mode = True
+        self.is_dark_mode = settings.get("theme", "dark") == "dark"
         self.theme_button = ctk.CTkButton(
             self.header_frame,
-            text="🌙",
+            text="🌙" if self.is_dark_mode else "🌞",
+            text_color="white" if self.is_dark_mode else "#000000",
             width=40,
             height=40,
             corner_radius=20,
@@ -197,6 +214,9 @@ class Scrapper:
         )
         self.calendar.pack(padx=15, pady=15)
 
+        # Apply correct calendar colors based on saved theme
+        self.apply_calendar_theme()
+
         # ===== RIGHT SIDE - Progress Section =====
         self.progress_container = ctk.CTkFrame(self.content_frame, corner_radius=10, fg_color="transparent")
         self.progress_container.grid(row=0, column=1, sticky="nsew", padx=(15, 0))
@@ -235,12 +255,9 @@ class Scrapper:
 
         self.root.mainloop()
 
-    def toggle_theme(self):
-        self.is_dark_mode = not self.is_dark_mode
-
+    def apply_calendar_theme(self):
+        """Apply the correct calendar colors based on current theme."""
         if self.is_dark_mode:
-            ctk.set_appearance_mode("dark")
-            self.theme_button.configure(text="🌙", text_color="white")
             self.calendar.configure(
                 background='#2b2b2b',
                 foreground='white',
@@ -258,8 +275,6 @@ class Scrapper:
                 othermonthweforeground='#666666'
             )
         else:
-            ctk.set_appearance_mode("light")
-            self.theme_button.configure(text="🌞", text_color="#000000")
             self.calendar.configure(
                 background='#ffffff',
                 foreground='#333333',
@@ -276,6 +291,21 @@ class Scrapper:
                 othermonthwebackground='#fafafa',
                 othermonthweforeground='#aaaaaa'
             )
+
+    def toggle_theme(self):
+        self.is_dark_mode = not self.is_dark_mode
+
+        # Save the preference
+        save_settings({"theme": "dark" if self.is_dark_mode else "light"})
+
+        if self.is_dark_mode:
+            ctk.set_appearance_mode("dark")
+            self.theme_button.configure(text="🌙", text_color="white")
+        else:
+            ctk.set_appearance_mode("light")
+            self.theme_button.configure(text="🌞", text_color="#000000")
+
+        self.apply_calendar_theme()
 
     def _asyncio_thread(self):
         self.async_loop.run_until_complete(self.documenting())

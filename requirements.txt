@@ -6,3 +6,4 @@ hijridate==2.3.0
 tk
 tkcalendar==1.6.1
 pillow
+customtkinter

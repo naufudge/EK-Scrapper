@@ -1,11 +1,13 @@
-import httpx, threading, asyncio
+import httpx, threading, asyncio, json, os
 from doc import doc
-import tkinter as tk
-from tkinter import ttk
-from tkcalendar import *
+import customtkinter as ctk
+from tkcalendar import Calendar
 from hijridate import Gregorian
 from datetime import datetime
 from async_scrapping import NewsScrapping
+
+# Settings file path
+SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.json')
 
 weekday_to_dhivehi = {
     0: "ހޯމަ",
@@ -77,52 +79,233 @@ month_num_in_dhivehi = {
     'ޑިސެންބަރު' : 12
 }
 
+def load_settings():
+    """Load settings from JSON file, return defaults if file doesn't exist."""
+    try:
+        with open(SETTINGS_FILE, 'r') as f:
+            return json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"theme": "dark"}
+
+def save_settings(settings):
+    """Save settings to JSON file."""
+    with open(SETTINGS_FILE, 'w') as f:
+        json.dump(settings, f, indent=2)
+
+# Load saved theme preference
+settings = load_settings()
+ctk.set_appearance_mode(settings.get("theme", "dark"))
+ctk.set_default_color_theme("blue")
 
 class Scrapper:
     def __init__(self, async_loop):
-        self.root = tk.Tk()
+        self.root = ctk.CTk()
         self.async_loop = async_loop
 
         self.root.title("EK Scrapper")
+        self.root.geometry("950x570")
+        self.root.minsize(800, 470)
+
         try:
             self.root.iconbitmap('icon.ico')
         except Exception as e:
             print(e)
 
-        self.label = tk.Label(self.root, text="އެކިއެކި ކަންކަން ހިނގާ ގޮތް ނެގުމަށްޓަކައި", font=('Faruma', 20))
-        self.label.grid(row=0, column=0, columnspan=2)
+        # Configure grid weights for responsive layout
+        self.root.grid_columnconfigure(0, weight=1)
+        self.root.grid_rowconfigure(2, weight=1)
 
-        self.textbox = tk.Text(self.root, height=3, font=('Faruma', 13), borderwidth=2)
-        self.textbox.grid(row=2, column=0, padx=20, pady=5, columnspan=2)
+        # ===== HEADER FRAME =====
+        self.header_frame = ctk.CTkFrame(self.root, corner_radius=0, fg_color="transparent")
+        self.header_frame.grid(row=0, column=0, sticky="ew", padx=20, pady=(20, 10))
+        self.header_frame.grid_columnconfigure(1, weight=1)
 
-        self.date = tk.Label(self.root, text="ތާރީޚު ނަންގަވާ", font=('Faruma', 14))
-        self.date.grid(row=3, column=0, pady=5)
+        # Theme toggle button (left side)
+        self.is_dark_mode = settings.get("theme", "dark") == "dark"
+        self.theme_button = ctk.CTkButton(
+            self.header_frame,
+            text="🌙" if self.is_dark_mode else "🌞",
+            text_color="white" if self.is_dark_mode else "#000000",
+            width=40,
+            height=40,
+            corner_radius=20,
+            font=('Segoe UI Emoji', 18),
+            fg_color="transparent",
+            hover_color=("gray75", "gray25"),
+            command=self.toggle_theme
+        )
+        self.theme_button.grid(row=0, column=0, sticky="w")
 
-        self.calendar = Calendar(self.root,
-                                 selectmode="day",
-                                 firstweekday="sunday",
-                                 weekenddays=[6,7],
-                                 font=('Faruma', 10),
-                                 showweeknumbers=False,
-                                 date_pattern='dd/MM/yyyy'
-                                )
-        self.calendar.grid(row=4, column=0, pady=10, padx=20)
+        # Title (center)
+        self.label = ctk.CTkLabel(
+            self.header_frame,
+            text="އެކިއެކި ކަންކަން ހިނގާ ގޮތް ނެގުމަށްޓަކައި",
+            font=('Faruma', 24, 'bold')
+        )
+        self.label.grid(row=0, column=1)
 
-        # self.entry_label = tk.Label(self.root, text="ތިރީގައި ފައިލް ނަން ލިޔުއްވާ", font=('Faruma', 15))
-        # self.entry_label.grid()
-        # self.entry = tk.Entry(self.root, width=35, borderwidth=2, font=('Faruma', 14), textvariable=self.file_name)
-        # self.entry.pack(padx=20, pady=10)
+        # Empty label to balance the layout (right side)
+        self.spacer = ctk.CTkLabel(self.header_frame, text="", width=100)
+        self.spacer.grid(row=0, column=2, sticky="e")
 
-        self.updates = tk.Label(self.root, text="މިންވަރު", font=('Faruma', 14))
-        self.updates.grid(row=3, column=1)
+        # ===== URL INPUT FRAME =====
+        self.url_frame = ctk.CTkFrame(self.root, corner_radius=10)
+        self.url_frame.grid(row=1, column=0, sticky="ew", padx=20, pady=10)
+        self.url_frame.grid_columnconfigure(0, weight=1)
 
-        self.progress = tk.Text(self.root, height=10, width=70, state='disabled', font=('Calibri', 12))
-        self.progress.grid(row=4, column=1, padx=20)
+        self.url_label = ctk.CTkLabel(
+            self.url_frame,
+            text="Enter URLs (comma separated):",
+            font=('Segoe UI', 12)
+        )
+        self.url_label.grid(row=0, column=0, sticky="w", padx=15, pady=(10, 5))
 
-        self.button1 = ttk.Button(self.root, width=15, text="\n!ނަގާ ޚަބަރު\n", command= lambda: self.do_tasks())
-        self.button1.grid(row=5, column=1, pady=10)
+        self.textbox = ctk.CTkTextbox(
+            self.url_frame,
+            height=80,
+            font=('Segoe UI', 13),
+            corner_radius=8
+        )
+        self.textbox.grid(row=1, column=0, sticky="ew", padx=15, pady=(0, 15))
+
+        # ===== MAIN CONTENT FRAME =====
+        self.content_frame = ctk.CTkFrame(self.root, corner_radius=0, fg_color="transparent")
+        self.content_frame.grid(row=2, column=0, sticky="nsew", padx=20, pady=10)
+        self.content_frame.grid_columnconfigure(1, weight=1)
+        self.content_frame.grid_rowconfigure(0, weight=1)
+
+        # ===== LEFT SIDE - Calendar Section =====
+        self.calendar_container = ctk.CTkFrame(self.content_frame, corner_radius=10, fg_color="transparent")
+        self.calendar_container.grid(row=0, column=0, sticky="n", padx=(0, 15))
+
+        self.date_label = ctk.CTkLabel(
+            self.calendar_container,
+            text="ތާރީޚު ނަންގަވާ",
+            font=('Faruma', 16)
+        )
+        self.date_label.pack(pady=(0, 10))
+
+        self.calendar_frame = ctk.CTkFrame(self.calendar_container, corner_radius=10)
+        self.calendar_frame.pack()
+
+        self.calendar = Calendar(
+            self.calendar_frame,
+            selectmode="day",
+            firstweekday="sunday",
+            weekenddays=[6, 7],
+            font=('Segoe UI', 11),
+            showweeknumbers=False,
+            date_pattern='dd/MM/yyyy',
+            background='#2b2b2b',
+            foreground='white',
+            headersbackground='#1f538d',
+            headersforeground='white',
+            selectbackground='#1f538d',
+            selectforeground='white',
+            normalbackground='#333333',
+            normalforeground='white',
+            weekendbackground='#3d3d3d',
+            weekendforeground='white',
+            othermonthbackground='#252525',
+            othermonthforeground='#666666',
+            othermonthwebackground='#252525',
+            othermonthweforeground='#666666',
+            borderwidth=0
+        )
+        self.calendar.pack(padx=15, pady=15)
+
+        # Apply correct calendar colors based on saved theme
+        self.apply_calendar_theme()
+
+        # ===== RIGHT SIDE - Progress Section =====
+        self.progress_container = ctk.CTkFrame(self.content_frame, corner_radius=10, fg_color="transparent")
+        self.progress_container.grid(row=0, column=1, sticky="nsew", padx=(15, 0))
+        self.progress_container.grid_rowconfigure(1, weight=1)
+        self.progress_container.grid_columnconfigure(0, weight=1)
+
+        self.progress_label = ctk.CTkLabel(
+            self.progress_container,
+            text="މިންވަރު",
+            font=('Faruma', 16)
+        )
+        self.progress_label.grid(row=0, column=0, pady=(0, 10))
+
+        self.progress = ctk.CTkTextbox(
+            self.progress_container,
+            font=('Consolas', 12),
+            corner_radius=10,
+            state='disabled'
+        )
+        self.progress.grid(row=1, column=0, sticky="nsew")
+
+        # ===== BUTTON FRAME =====
+        self.button_frame = ctk.CTkFrame(self.root, corner_radius=0, fg_color="transparent")
+        self.button_frame.grid(row=3, column=0, pady=20)
+
+        self.button1 = ctk.CTkButton(
+            self.button_frame,
+            text="ޚަބަރު ނަގާ",
+            font=('Faruma', 16, 'bold'),
+            width=200,
+            height=45,
+            corner_radius=10,
+            command=self.do_tasks
+        )
+        self.button1.pack()
 
         self.root.mainloop()
+
+    def apply_calendar_theme(self):
+        """Apply the correct calendar colors based on current theme."""
+        if self.is_dark_mode:
+            self.calendar.configure(
+                background='#2b2b2b',
+                foreground='white',
+                headersbackground='#1f538d',
+                headersforeground='white',
+                selectbackground='#1f538d',
+                selectforeground='white',
+                normalbackground='#333333',
+                normalforeground='white',
+                weekendbackground='#3d3d3d',
+                weekendforeground='white',
+                othermonthbackground='#252525',
+                othermonthforeground='#666666',
+                othermonthwebackground='#252525',
+                othermonthweforeground='#666666'
+            )
+        else:
+            self.calendar.configure(
+                background='#ffffff',
+                foreground='#333333',
+                headersbackground='#3b8ed0',
+                headersforeground='white',
+                selectbackground='#3b8ed0',
+                selectforeground='white',
+                normalbackground='#f0f0f0',
+                normalforeground='#333333',
+                weekendbackground='#e8e8e8',
+                weekendforeground='#333333',
+                othermonthbackground='#fafafa',
+                othermonthforeground='#aaaaaa',
+                othermonthwebackground='#fafafa',
+                othermonthweforeground='#aaaaaa'
+            )
+
+    def toggle_theme(self):
+        self.is_dark_mode = not self.is_dark_mode
+
+        # Save the preference
+        save_settings({"theme": "dark" if self.is_dark_mode else "light"})
+
+        if self.is_dark_mode:
+            ctk.set_appearance_mode("dark")
+            self.theme_button.configure(text="🌙", text_color="white")
+        else:
+            ctk.set_appearance_mode("light")
+            self.theme_button.configure(text="🌞", text_color="#000000")
+
+        self.apply_calendar_theme()
 
     def _asyncio_thread(self):
         self.async_loop.run_until_complete(self.documenting())
@@ -161,13 +344,13 @@ class Scrapper:
 
     # Progress updater below
     def printer(self, msg):
-        self.progress['state'] = 'normal'
-        self.progress.insert("end-1c", f"{msg}\n")
-        self.progress['state'] = 'disabled'
+        self.progress.configure(state='normal')
+        self.progress.insert("end", f"{msg}\n")
+        self.progress.configure(state='disabled')
         self.progress.see("end")
 
     async def documenting(self):
-        inputt = (self.textbox.get("1.0", tk.END)).split(',')
+        inputt = (self.textbox.get("1.0", "end-1c")).split(',')
         urls, tasks = [], []
         urls.append(inputt)
 

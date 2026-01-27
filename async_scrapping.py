@@ -1,3 +1,5 @@
+from sqlite3 import paramstyle
+from typing import List
 from bs4 import BeautifulSoup, NavigableString, PageElement, ResultSet
 import httpx
 
@@ -65,7 +67,7 @@ class NewsScrapping:
 
             #Finds all the main body writing of the article
             article_main = soup.find('div', class_='component-article-content clearfix')
-            results['paras'] = article_main.find_all('p')
+            results['paras'] = article_main.find_all(['p', 'li'])
             return results
         else:
             return None
@@ -109,7 +111,7 @@ class NewsScrapping:
             # Find all the main body wiriting of the article
             article_main = soup.find('div', class_="article-body space-y-10")
             # results['paras'] = article_main.find_all('p')
-            paras: ResultSet[PageElement] = article_main.find_all(['p', 'a', 'h2', 'h3'])
+            paras: ResultSet[PageElement] = article_main.find_all(['p', 'h2', 'h3'])
             for para in paras:
                 try:
                     if "text-lg" in para['class'] or "text-xs" in para['class']:
@@ -148,6 +150,9 @@ class NewsScrapping:
             #Finds all the main body writing of the article
             article_main = soup.find('div', class_='article-body')
             results['paras'] = article_main.find_all(is_br_tag)
+            for index, para in enumerate(results['paras']):
+                if para in results['paras'][index-1]:
+                    results['paras'].remove(para)
         return results
 
     async def Avas(self, url):

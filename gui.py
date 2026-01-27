@@ -1,4 +1,4 @@
-import httpx, threading, asyncio, json, os
+import httpx, threading, asyncio, json, os, sys
 from doc import doc
 import customtkinter as ctk
 from tkcalendar import Calendar
@@ -6,8 +6,14 @@ from hijridate import Gregorian
 from datetime import datetime
 from async_scrapping import NewsScrapping
 
+# Get the correct base path for frozen exe or regular script
+if getattr(sys, 'frozen', False):
+    BASE_DIR = os.path.dirname(sys.executable)
+else:
+    BASE_DIR = os.path.dirname(__file__)
+
 # Settings file path
-SETTINGS_FILE = os.path.join(os.path.dirname(__file__), 'settings.json')
+SETTINGS_FILE = os.path.join(BASE_DIR, 'settings.json')
 
 weekday_to_dhivehi = {
     0: "ހޯމަ",
@@ -88,9 +94,13 @@ def load_settings():
         return {"theme": "dark"}
 
 def save_settings(settings):
-    """Save settings to JSON file."""
+    """Save settings to JSON file and hide it on Windows."""
     with open(SETTINGS_FILE, 'w') as f:
         json.dump(settings, f, indent=2)
+    # Hide the file on Windows
+    if sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.kernel32.SetFileAttributesW(SETTINGS_FILE, 2)  # 2 = FILE_ATTRIBUTE_HIDDEN
 
 # Load saved theme preference
 settings = load_settings()
@@ -414,5 +424,8 @@ class Scrapper:
         self.printer("Finished copying all the links!")
 
 if __name__ == '__main__':
+    # PyInstaller command:
+    # pyinstaller --onefile --windowed --icon=icon.ico --add-data "icon.ico;." --name "EK-Scrapper" gui.py
+    
     aLoop = asyncio.get_event_loop()
     Scrapper(aLoop)

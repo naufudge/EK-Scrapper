@@ -1,4 +1,4 @@
-from bs4 import BeautifulSoup, PageElement, ResultSet
+from bs4 import BeautifulSoup, NavigableString, PageElement, ResultSet
 import httpx
 
 # Modified for full automation
@@ -21,6 +21,9 @@ def is_news_sun(soup: BeautifulSoup) -> bool:
         return True
     else:
         return False
+
+def is_br_tag(tag: NavigableString) -> bool:
+    return tag.name != "br"
 
 class NewsScrapping:
     def __init__(self, client: httpx.AsyncClient) -> None:
@@ -106,7 +109,7 @@ class NewsScrapping:
             # Find all the main body wiriting of the article
             article_main = soup.find('div', class_="article-body space-y-10")
             # results['paras'] = article_main.find_all('p')
-            paras: ResultSet[PageElement] = article_main.find_all(['p', 'a'])
+            paras: ResultSet[PageElement] = article_main.find_all(['p', 'a', 'h2', 'h3'])
             for para in paras:
                 try:
                     if "text-lg" in para['class'] or "text-xs" in para['class']:
@@ -144,7 +147,7 @@ class NewsScrapping:
                 
             #Finds all the main body writing of the article
             article_main = soup.find('div', class_='article-body')
-            results['paras'] = article_main.find_all()
+            results['paras'] = article_main.find_all(is_br_tag)
         return results
 
     async def Avas(self, url):

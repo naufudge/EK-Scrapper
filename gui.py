@@ -103,8 +103,8 @@ class Scrapper:
         self.async_loop = async_loop
 
         self.root.title("EK Scrapper")
-        self.root.geometry("950x570")
-        self.root.minsize(800, 470)
+        self.root.geometry("850x600")
+        self.root.minsize(800, 600)
 
         try:
             self.root.iconbitmap('icon.ico')
@@ -155,8 +155,8 @@ class Scrapper:
 
         self.url_label = ctk.CTkLabel(
             self.url_frame,
-            text="Enter URLs (comma separated):",
-            font=('Segoe UI', 12)
+            text="ލިންކްތައް ޖައްސަވާ (ކޮމާ އިން ވަކިކޮށްފައި)",
+            font=('Faruma', 16),
         )
         self.url_label.grid(row=0, column=0, sticky="w", padx=15, pady=(10, 5))
 

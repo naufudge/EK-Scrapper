@@ -95,6 +95,10 @@ def load_settings():
 
 def save_settings(settings):
     """Save settings to JSON file and hide it on Windows."""
+    # On Windows, clear hidden attribute before writing so truncation succeeds
+    if sys.platform == 'win32':
+        import ctypes
+        ctypes.windll.kernel32.SetFileAttributesW(SETTINGS_FILE, 0)  # 0 = FILE_ATTRIBUTE_NORMAL
     with open(SETTINGS_FILE, 'w') as f:
         json.dump(settings, f, indent=2)
     # Hide the file on Windows

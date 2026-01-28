@@ -1,6 +1,4 @@
-from sqlite3 import paramstyle
-from typing import List
-from bs4 import BeautifulSoup, NavigableString, PageElement, ResultSet
+from bs4 import BeautifulSoup, NavigableString, PageElement, ResultSet, Tag
 import httpx
 
 # Modified for full automation
@@ -149,10 +147,19 @@ class NewsScrapping:
                 
             #Finds all the main body writing of the article
             article_main = soup.find('div', class_='article-body')
-            results['paras'] = article_main.find_all(is_br_tag)
-            for index, para in enumerate(results['paras']):
-                if para in results['paras'][index-1]:
-                    results['paras'].remove(para)
+            results['paras']: ResultSet[NavigableString | Tag] = article_main.find_all(is_br_tag)
+
+            # results['paras'] = [
+            #     para for index, para in enumerate[Tag](paras) if not para in paras[index].find_previous()
+            # ]
+            
+            for index, para in enumerate[NavigableString | Tag](results['paras']):
+                try:
+                    print(type(para))
+                    if para in results['paras'][index+1]:
+                        results['paras'].remove(para)
+                except IndexError:
+                    continue
         return results
 
     async def Avas(self, url):

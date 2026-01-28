@@ -109,7 +109,7 @@ class NewsScrapping:
             # Find all the main body wiriting of the article
             article_main = soup.find('div', class_="article-body space-y-10")
             # results['paras'] = article_main.find_all('p')
-            paras: ResultSet[PageElement] = article_main.find_all(['p', 'h2', 'h3'])
+            paras: ResultSet[NavigableString | Tag] = article_main.find_all(['p', 'h2', 'h3', 'li'])
             for para in paras:
                 try:
                     if "text-lg" in para['class'] or "text-xs" in para['class']:

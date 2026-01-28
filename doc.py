@@ -6,8 +6,10 @@ from docx.enum.style import WD_STYLE_TYPE
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.image.exceptions import UnrecognizedImageError
 from PIL import Image
-from bs4 import NavigableString
+from bs4 import NavigableString, ResultSet, Tag
 import io, os, httpx
+
+from helpers import valid_xml_char_ordinal
 
 
 def add_hyperlink(paragraph, url, text):
@@ -76,7 +78,7 @@ def create_initial_doc(doc_name: str, hijri_date: str, dhivehi_date: str):
     return document
 
 
-def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, paras: list, image = None, update_url = True):
+def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, paras: ResultSet[NavigableString | Tag], image = None, update_url = True):
     if (os.path.exists(f"./{filename}.docx")):
         document = Document(f"{filename}.docx")
         try:
@@ -175,14 +177,14 @@ def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, p
             pass
 
         # Handle standalone <a> tags (not inside <p>)
-        if each.name == 'a' and each.get('href'):
-            main_body = document.add_paragraph()
-            main_body.alignment = align_right
-            link_text = each.get_text().strip()
-            link_url = each['href']
-            if link_text and link_url:
-                add_hyperlink(main_body, link_url, link_text)
-            continue
+        # if each.name == 'a' and each.get('href'):
+        #     main_body = document.add_paragraph()
+        #     main_body.alignment = align_right
+        #     link_text = each.get_text().strip()
+        #     link_url = each['href']
+        #     if link_text and link_url:
+        #         add_hyperlink(main_body, link_url, link_text)
+        #     continue
 
         main_body = document.add_paragraph()
         main_body.alignment = align_right
@@ -192,17 +194,20 @@ def doc(filename, hijri_date, dhivehi_date, url: str, author: str, title: str, p
             if isinstance(child, NavigableString):
                 text = str(child).strip()
                 if text:
-                    main_body.add_run(text)
+                    cleaned_text = ''.join(c for c in text if valid_xml_char_ordinal(c))
+                    main_body.add_run(cleaned_text)
             elif child.name == 'a' and child.get('href'):
                 link_text = child.get_text().strip()
                 link_url = child['href']
                 if link_text and link_url:
-                    add_hyperlink(main_body, link_url, link_text)
+                    cleaned_link_text = ''.join(c for c in link_text if valid_xml_char_ordinal(c))
+                    add_hyperlink(main_body, link_url, cleaned_link_text)
             elif child.name:
                 # Handle other nested elements - extract text
                 text = child.get_text().strip()
                 if text:
-                    main_body.add_run(text)
+                    cleaned_text = ''.join(c for c in text if valid_xml_char_ordinal(c))
+                    main_body.add_run(cleaned_text)
 
     document.add_page_break()
 

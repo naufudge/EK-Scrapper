@@ -91,7 +91,7 @@ def load_settings():
         with open(SETTINGS_FILE, 'r') as f:
             return json.load(f)
     except (FileNotFoundError, json.JSONDecodeError):
-        return {"theme": "dark"}
+        return {"theme": "dark", "font_size": 13}
 
 def save_settings(settings):
     """Save settings to JSON file and hide it on Windows."""
@@ -136,6 +136,7 @@ class Scrapper:
 
         # Theme toggle button (left side)
         self.is_dark_mode = settings.get("theme", "dark") == "dark"
+        self.url_font_size = settings.get("font_size", 13)
         self.theme_button = ctk.CTkButton(
             self.header_frame,
             text="🌙" if self.is_dark_mode else "🌞",
@@ -174,13 +175,53 @@ class Scrapper:
         )
         self.url_label.grid(row=0, column=0, sticky="w", padx=15, pady=(10, 5))
 
+        # Font size controls (right side of URL label row)
+        self.font_controls_frame = ctk.CTkFrame(self.url_frame, fg_color="transparent")
+        self.font_controls_frame.grid(row=0, column=1, sticky="e", padx=(0, 15), pady=(10, 5))
+
+        self.font_decrease_btn = ctk.CTkButton(
+            self.font_controls_frame,
+            text="-",
+            width=28,
+            height=28,
+            corner_radius=14,
+            font=('Segoe UI', 16, 'bold'),
+            fg_color="transparent",
+            text_color=("gray10", "gray90"),
+            hover_color=("gray75", "gray25"),
+            command=self.decrease_font_size
+        )
+        self.font_decrease_btn.pack(side="left", padx=(0, 4))
+
+        self.font_size_label = ctk.CTkLabel(
+            self.font_controls_frame,
+            text=str(self.url_font_size),
+            font=('Segoe UI', 13),
+            width=30
+        )
+        self.font_size_label.pack(side="left", padx=2)
+
+        self.font_increase_btn = ctk.CTkButton(
+            self.font_controls_frame,
+            text="+",
+            width=28,
+            height=28,
+            corner_radius=14,
+            font=('Segoe UI', 16, 'bold'),
+            fg_color="transparent",
+            text_color=("gray10", "gray90"),
+            hover_color=("gray75", "gray25"),
+            command=self.increase_font_size
+        )
+        self.font_increase_btn.pack(side="left", padx=(4, 0))
+
         self.textbox = ctk.CTkTextbox(
             self.url_frame,
             height=80,
-            font=('Segoe UI', 13),
+            font=('Segoe UI', self.url_font_size),
             corner_radius=8
         )
-        self.textbox.grid(row=1, column=0, sticky="ew", padx=15, pady=(0, 15))
+        self.textbox.grid(row=1, column=0, columnspan=2, sticky="ew", padx=15, pady=(0, 15))
 
         # ===== MAIN CONTENT FRAME =====
         self.content_frame = ctk.CTkFrame(self.root, corner_radius=0, fg_color="transparent")
@@ -310,7 +351,9 @@ class Scrapper:
         self.is_dark_mode = not self.is_dark_mode
 
         # Save the preference
-        save_settings({"theme": "dark" if self.is_dark_mode else "light"})
+        current_settings = load_settings()
+        current_settings["theme"] = "dark" if self.is_dark_mode else "light"
+        save_settings(current_settings)
 
         if self.is_dark_mode:
             ctk.set_appearance_mode("dark")
@@ -320,6 +363,25 @@ class Scrapper:
             self.theme_button.configure(text="🌞", text_color="#000000")
 
         self.apply_calendar_theme()
+
+    def _update_font_size(self, new_size):
+        """Apply new font size to the URL textbox, update label, and persist."""
+        self.url_font_size = new_size
+        self.textbox.configure(font=('Segoe UI', self.url_font_size))
+        self.font_size_label.configure(text=str(self.url_font_size))
+        current_settings = load_settings()
+        current_settings["font_size"] = self.url_font_size
+        save_settings(current_settings)
+
+    def increase_font_size(self):
+        """Increase URL textbox font size by 1, up to maximum of 24."""
+        if self.url_font_size < 24:
+            self._update_font_size(self.url_font_size + 1)
+
+    def decrease_font_size(self):
+        """Decrease URL textbox font size by 1, down to minimum of 10."""
+        if self.url_font_size > 10:
+            self._update_font_size(self.url_font_size - 1)
 
     def _asyncio_thread(self):
         self.async_loop.run_until_complete(self.documenting())
